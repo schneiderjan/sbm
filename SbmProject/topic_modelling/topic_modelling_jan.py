@@ -26,21 +26,26 @@ def pre_process(x):
 
 print('Start pre processing.')
 stuff = df['content']
-stuff_pp = stuff.apply(pre_process)
-stuff_ppp = stuff_pp.apply(word_tokenize)
+stuff_2 = stuff.apply(pre_process)
+stuff_3 = stuff_2.apply(word_tokenize)
 print('Finished pre processing.')
 
 print('Create doc2bow and dictionary.')
-dictionary = Dictionary(stuff_ppp)
+dictionary = Dictionary(stuff_3)
 print("Created dict with {0}".format(dictionary))
-corpus = [dictionary.doc2bow(text) for text in stuff_ppp]
+corpus = [dictionary.doc2bow(text) for text in stuff_3]
 
 print('Save corpus and dictionary.')
 pickle.dump(corpus, open('corpus.pkl', 'wb'))
 dictionary.save('dictionary.gensim')
 
+print('Create TF-IDF model.')
+tfidf = models.TfidfModel(corpus)
+print('Transform corpus to tfidf vector space.')
+transformed_corpus = tfidf[corpus]
+
 print('Make LDA model.')
-ldamodel = models.ldamodel.LdaModel(corpus, num_topics=10, id2word=dictionary, passes=15)
+ldamodel = models.ldamodel.LdaModel(transformed_corpus, num_topics=10, id2word=dictionary, passes=15)
 ldamodel.save('model5.gensim')
 topics = ldamodel.print_topics(num_words=10)
 for topic in topics:
