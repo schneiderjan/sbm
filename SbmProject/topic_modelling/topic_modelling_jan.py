@@ -1,67 +1,10 @@
-import pandas as pd
-from nltk import corpus
 from gensim import models
-from gensim.corpora import Dictionary
-from gensim.utils import simple_preprocess
-from nltk.stem import WordNetLemmatizer, SnowballStemmer
 import pickle
+from gensim.corpora import Dictionary
 
-dtypes_dict = {'title': str, 'content': str}
-conv = {'title': lambda x: str(x)}
-df = pd.read_csv('D:\GoogleDriveJads\Projects\JM0170-SBM-gr17\Data\\reviews_rank_for_appID_and_week.csv',
-                 infer_datetime_format=True, error_bad_lines=False)
-stopwords = corpus.stopwords.words('english')
-stemmer = SnowballStemmer("english")
-
-extra_stopwords = ['app', 'love', 'use', 'get', 'like', 'great']
-stopwords.extend(extra_stopwords)
-
-def lemmatize_stemming(text):
-    return stemmer.stem(WordNetLemmatizer().lemmatize(text, pos='v'))
-
-
-# def pre_process(x):
-#     x = re.sub('[^a-z\s]', '', x.lower())  # lowercase
-#     x = [w for w in x.split() if w not in set(stopwords) and len(w) >= 3]  # remove stopwords
-#     x = [w for w in lemmatize_stemming(x)]  # tokenize
-#     return ' '.join(x)  # join the list
-
-
-def pre_process(text):
-    """
-    Simple pre process does lowercase and tokenize
-    then stopwords removed and words greater equal of length 3 are removed
-    finally words are lemmatized/stemmed
-
-    :param text: One list of one app row as in the csv file
-    :return: a single list of all words for the row that was inserted.
-    """
-    result = []
-    # print(text.strip())
-    for token in simple_preprocess(text):
-        token = token.replace('\\n', '')
-        if token not in set(stopwords) and len(token) >= 3:
-            result.append(lemmatize_stemming(token))
-    return result
-
-
-print('Start pre_processing.')
-stuff = df['content']
-pre_processed_reviews = []
-for app_reviews in stuff:
-    pre_processed_reviews.append(pre_process(app_reviews))
-
-print('Pickle dump pre processed reviews.')
-pickle.dump(pre_processed_reviews, open('pre_processed_reviews.pkl', 'wb'))
-
-print('Create doc2bow and dictionary.')
-dictionary = Dictionary(pre_processed_reviews)
-print("Created dict with {0}".format(dictionary))
-corpus = [dictionary.doc2bow(text) for text in pre_processed_reviews]
-
-print('Save corpus and dictionary.')
-pickle.dump(corpus, open('corpus.pkl', 'wb'))
-dictionary.save('dictionary.gensim')
+with open('D:\CodeJads\sbm\SbmProject\data_extraction\\corpus.pkl', 'rb') as f:
+    corpus = pickle.load(f)
+dictionary = Dictionary.load('D:\CodeJads\sbm\SbmProject\data_extraction\\dictionary.gensim')
 
 print('Create TF-IDF model.')
 tfidf = models.TfidfModel(corpus)
@@ -70,8 +13,8 @@ tfidf_corpus = tfidf[corpus]
 pickle.dump(tfidf_corpus, open('corpus_tfidf.pkl', 'wb'))
 
 print('Make LDA model.')
-ldamodel = models.ldamodel.LdaModel(tfidf_corpus, num_topics=8, id2word=dictionary, passes=15)
-ldamodel.save('model5.gensim')
+ldamodel = models.ldamodel.LdaModel(tfidf_corpus, num_topics=10, id2word=dictionary, passes=15)
+ldamodel.save('lda_model.gensim')
 topics = ldamodel.print_topics(num_words=10)
 for topic in topics:
     print(topic)
